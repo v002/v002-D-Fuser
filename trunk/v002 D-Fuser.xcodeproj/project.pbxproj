@@ -24,6 +24,8 @@
 /* Begin PBXBuildFile section */
 		16BA95420A7EB2EB001E4983 /* v002_D_FuserPlugIn.m in Sources */ = {isa = PBXBuildFile; fileRef = 16BA95410A7EB2EB001E4983 /* v002_D_FuserPlugIn.m */; };
 		16BA96310A7EB9AC001E4983 /* Quartz.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 16BA96300A7EB9AC001E4983 /* Quartz.framework */; };
+		1B436C4912D2DD6A004D2F17 /* spark icon 2007-50px.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B436C4712D2DD6A004D2F17 /* spark icon 2007-50px.png */; };
+		1B436C4A12D2DD6A004D2F17 /* vade icon.png in Resources */ = {isa = PBXBuildFile; fileRef = 1B436C4812D2DD6A004D2F17 /* vade icon.png */; };
 		1BB0879E11E3D96900324FF9 /* AMSerialPort_Deprecated.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BB0879011E3D96900324FF9 /* AMSerialPort_Deprecated.m */; };
 		1BB0879F11E3D96900324FF9 /* AMSerialPort.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BB0879211E3D96900324FF9 /* AMSerialPort.m */; };
 		1BB087A011E3D96900324FF9 /* AMSerialPortAdditions.m in Sources */ = {isa = PBXBuildFile; fileRef = 1BB0879411E3D96900324FF9 /* AMSerialPortAdditions.m */; };
@@ -52,6 +54,8 @@
 		16BA95400A7EB2EB001E4983 /* v002_D_FuserPlugIn.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = v002_D_FuserPlugIn.h; sourceTree = "<group>"; };
 		16BA95410A7EB2EB001E4983 /* v002_D_FuserPlugIn.m */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.objc; path = v002_D_FuserPlugIn.m; sourceTree = "<group>"; };
 		16BA96300A7EB9AC001E4983 /* Quartz.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Quartz.framework; path = /System/Library/Frameworks/Quartz.framework; sourceTree = "<absolute>"; };
+		1B436C4712D2DD6A004D2F17 /* spark icon 2007-50px.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "spark icon 2007-50px.png"; sourceTree = "<group>"; };
+		1B436C4812D2DD6A004D2F17 /* vade icon.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "vade icon.png"; sourceTree = "<group>"; };
 		1BB0878E11E3D96900324FF9 /* AMSerialErrors.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AMSerialErrors.h; sourceTree = "<group>"; };
 		1BB0878F11E3D96900324FF9 /* AMSerialPort_Deprecated.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AMSerialPort_Deprecated.h; sourceTree = "<group>"; };
 		1BB0879011E3D96900324FF9 /* AMSerialPort_Deprecated.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = AMSerialPort_Deprecated.m; sourceTree = "<group>"; };
@@ -113,6 +117,8 @@
 		089C167CFE841241C02AAC07 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				1B436C4712D2DD6A004D2F17 /* spark icon 2007-50px.png */,
+				1B436C4812D2DD6A004D2F17 /* vade icon.png */,
 				7238D5500DB6988600E9A42D /* Settings.xib */,
 				8D5B49B7048680CD000E48DA /* Info.plist */,
 				4BA8A0CC12D255E000A2BCED /* mtx edid.bin */,
@@ -221,6 +227,8 @@
 			files = (
 				7238D5520DB6988600E9A42D /* Settings.xib in Resources */,
 				4BA8A0CD12D255E000A2BCED /* mtx edid.bin in Resources */,
+				1B436C4912D2DD6A004D2F17 /* spark icon 2007-50px.png in Resources */,
+				1B436C4A12D2DD6A004D2F17 /* vade icon.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
