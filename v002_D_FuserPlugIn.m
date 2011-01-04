@@ -717,52 +717,53 @@ void MyTV1WriteCallback(char* command, void* context)
 
 - (void) setEDID:(NSUInteger)index
 {
-  // SPK-DFuser: Slot 4 is reserved for Triplehead2Go 
-  if (index == 3) {
-    [self uploadEDID:@"mtx edid" toSlot:3];
-  }
+    // SPK-DFuser: Slot 4 is reserved for Triplehead2Go 
+    if (index == 3)
+    {
+        [self uploadEDID:@"mtx edid" toSlot:3];
+    }
   
-  // Do for both DVI1 & 2
-	error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(kTV1SourceRGB1, kTV1WindowIDA, kTV1FunctionAdjustSourceEDID, index) );
-  error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(kTV1SourceRGB2, kTV1WindowIDB, kTV1FunctionAdjustSourceEDID, index) );
+    // Do for both DVI1 & 2
+    error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(kTV1SourceRGB1, kTV1WindowIDA, kTV1FunctionAdjustSourceEDID, index) );
+    error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(kTV1SourceRGB2, kTV1WindowIDB, kTV1FunctionAdjustSourceEDID, index) );
 }
 
 - (void) uploadEDID:(NSString*)filename toSlot:(NSUInteger)edidSlot
 {
-  // Load EDID binary file from resource folder
-  NSString* path = [[NSBundle bundleWithIdentifier:@"com.spk.dfuser"] pathForResource:filename ofType:@"bin"];
-  NSData* edid = [NSData dataWithContentsOfFile:path];
-  
-  NSLog(@"edid path: %@, data: %@", path, edid);
-  
-  NSUInteger i,j;
-  
-  for (i=0; i<256; i=i+32)
-  {
+    // Load EDID binary file from resource folder
+    NSString* path = [[NSBundle bundleForClass:[self class]] pathForResource:filename ofType:@"bin"];
+    NSData* edid = [NSData dataWithContentsOfFile:path];
+
+    NSLog(@"edid path: %@, data: %@", path, edid);
+
+    NSUInteger i,j;
+
+    for (i=0; i<256; i=i+32)
+    {
     // our command string is entirely magic numbers translated from a vb code snippet.
-//    char command[8+32+1];
-    
-//    command[0] = 0x53;
-//    command[1] = 39;
-//    command[2] = 0x22;
-//    command[3] = 0x7;
-//    command[4] = edidSlot;
-//    command[5] = 0;
-//    command[6] = i / 32;
-//    command[7] = 0;
-//    
-//    for (j=0; j<32; j++)
-//    {
-//      if (i+j < [edid length]) 
-//        [edid getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
-//      else 
-//        *(command+8+j) = 0;
-//    }
-//    
-//    command[8+32] = 63;
+    // char command[8+32+1];
+
+    // command[0] = 0x53;
+    // command[1] = 39;
+    // command[2] = 0x22;
+    // command[3] = 0x7;
+    // command[4] = edidSlot;
+    // command[5] = 0;
+    // command[6] = i / 32;
+    // command[7] = 0;
+    //    
+    // for (j=0; j<32; j++)
+    // {
+    //   if (i+j < [edid length]) 
+    //     [edid getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
+    //   else 
+    //     *(command+8+j) = 0;
+    // }
+    //    
+    // command[8+32] = 63;
 
     char command[1+8+32+1+1];
-    
+
     command[0] = 'F'; // Guessed - the SOP
     command[1] = 0x53;
     command[2] = 39;
@@ -772,25 +773,25 @@ void MyTV1WriteCallback(char* command, void* context)
     command[6] = 0;
     command[7] = i / 32;
     command[8] = 0;
-    
+
     for (j=0; j<32; j++)
     {
-      if (i+j < [edid length]) 
-        [edid getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
-      else 
-        *(command+8+j) = 0;
+        if (i+j < [edid length]) 
+            [edid getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
+        else 
+            *(command+8+j) = 0;
     }
-    
+
     command[9+32] = 63;
     command[10+32] = 13; // Guessed - the EOP
-    
+
     NSLog(@"command: %@", [NSData dataWithBytes:command length:43]);
-    
+
     error = tv1SubmitSerialCommand( command );
-    
+
     if (error != kTV1NoError)
-      NSLog(@"Error writing EDID");
-  }
-  
+        NSLog(@"Error writing EDID");
+
+    }
 }
 @end
