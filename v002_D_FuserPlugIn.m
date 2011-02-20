@@ -724,7 +724,7 @@ void MyTV1WriteCallback(char* command, void* context)
         NSString* path = [[NSBundle bundleForClass:[self class]] pathForResource:@"mtx edid" ofType:@"bin"];
         NSData* edid = [NSData dataWithContentsOfFile:path];
         
-        NSLog(@"edid path: %@, data: %@", path, edid);
+        SPKLog(@"edid path: %@, data: %@", path, edid);
 
         [self uploadEDID:edid toSlot:3];
     }
@@ -736,74 +736,141 @@ void MyTV1WriteCallback(char* command, void* context)
 
 - (void) uploadEDID:(NSData*)edidData toSlot:(NSUInteger)edidSlotIndex
 {
-		// TASK: Check and return if processor's EDID is already correct
+	NSUInteger commandLength, ackLength; 
+	NSUInteger i,j;
 	
-		// ...
-	
-		// TASK: Upload EDID
+	// TASK: Check and return if processor's EDID is already correct
 
-		// This command is reverse engineered from a VB snippet and RS232 comms logged between TVOne test app and unit 
+	// This command is reverse engineered from RS232 comms logged between TVOne test app and unit
+
+	// To read EDID, its requested as extra long chunks in the acknowledgement to the command
+	// Command: 8 bytes of command (see code below)
+	// Acknowledgement: 8 bytes of command (see code below) + 32 bytes of EDID payload + End byte
+
+	commandLength = 8+1; 
+	ackLength = 8+32+1;
+	
+	char readEDIDBytes[256];
+	NSData* readEDIDData;
+	
+    for (i=0; i<[edidData length]; i=i+32)
+    {
+		char command[commandLength];
 		
-		// To write EDID, its broken into chunks and sent as a series of extra-long commands
-		// Command: 8 bytes of command (see code below) + 32 bytes of EDID payload + End byte
-		// Acknowledgement: 53 02 40 95 (Hex)
+		command[0] = 0x53;
+		command[1] = 0x07;
+		command[2] = 0xA2;
+		command[3] = 0x7;
+		command[4] = edidSlotIndex; // as per edidSlotArray
+		command[5] = 0;
+		command[6] = i / 32; // ie. chunk index
+		command[7] = 0;
+		command[8] = 0x3F;
+		
+		// Clear read buffer
+		[port readAndReturnError:nil]; // is this the right command?
+		
+		// Write command
+		[port writeBytes:command length:commandLength error:nil];
+		
+		// Wait for Acknowledgement
+		NSData* ack = [port readBytes:ackLength error:nil];
+		
+		SPKLog(@"ack: %@", ack);
+		
+		for (j=0; j<32; j++)
+		{
+			if (8+j < [ack length]) 
+				[ack getBytes:(readEDIDBytes+i+j) range:NSMakeRange(8+j, 1)];
+			else 
+				*(readEDIDBytes+i+j) = 0;
+		}
+	}
 	
-		char ackBytes[] = {0x53, 0x02, 0x40, 0x95};
-		NSData* goodAck = [NSData dataWithBytes:ackBytes length:4];
-	
-    NSUInteger length = 8+32+1; 
-  
-    NSUInteger i,j;
+	// We want to compare like-for-like, so using length of edidData rather than full 256
+	readEDIDData = [NSData dataWithBytes:readEDIDBytes length:[edidData length]];
+		
+	if ([readEDIDData isEqual:edidData])
+	{
+		NSLog(@"Correct EDID already present, skipping upload");
+		
+		// Seem to need pause here for TVOne to catch up with itself. Don't understand, but whatever.
+		[port readAndReturnError:nil];
+		
+		return;
+	}
+	else
+	{
+		NSLog(@"EDID requires uploading.");
+		SPKLog(@"Found: %@", readEDIDData);
+	}
 
+	
+	// TASK: Upload EDID
+
+	// This command is reverse engineered from a VB snippet and RS232 comms logged between TVOne test app and unit 
+	
+	// To write EDID, its broken into chunks and sent as a series of extra-long commands
+	// Command: 8 bytes of command (see code below) + 32 bytes of EDID payload + End byte
+	// Acknowledgement: 53 02 40 95 (Hex)
+
+    commandLength = 8+32+1;
+	ackLength = 4;
+
+	char ackBytes[] = {0x53, 0x02, 0x40, 0x95};
+	NSData* goodAck = [NSData dataWithBytes:ackBytes length:ackLength];
+	
+	// We want to upload full EDID slot, ie. zero out to 256 even if edidData is only 128bytes.
     for (i=0; i<256; i=i+32)
     {
-      char command[length];
+		char command[commandLength];
 
-      command[0] = 0x53;
-      command[1] = 0x27;
-      command[2] = 0x22;
-      command[3] = 0x7;
-      command[4] = edidSlotIndex; // as per edidSlotArray
-      command[5] = 0;
-      command[6] = i / 32; // ie. chunk index
-      command[7] = 0;
-        
-      for (j=0; j<32; j++)
-      {
-          if (i+j < [edidData length]) 
-              [edidData getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
-          else 
-              *(command+8+j) = 0;
-      }
+		command[0] = 0x53;
+		command[1] = 0x27;
+		command[2] = 0x22;
+		command[3] = 0x7;
+		command[4] = edidSlotIndex; // as per edidSlotArray
+		command[5] = 0;
+		command[6] = i / 32; // ie. chunk index
+		command[7] = 0;
 
-      command[8+32] = 0x3F;
+		for (j=0; j<32; j++)
+		{
+		  if (i+j < [edidData length]) 
+			  [edidData getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
+		  else 
+			  *(command+8+j) = 0;
+		}
 
-      NSLog(@"EDID command: %@", [NSData dataWithBytes:command length:length]);
+		command[8+32] = 0x3F;
+
+		SPKLog(@"EDID command: %@", [NSData dataWithBytes:command length:commandLength]);
+
+		// Writing directly not via callback as we are no longer 20 bytes long
+		// Also, null terminated strings surely don't work here as we've got hex bytes in the command which are often 0.
+		// Also also, using [self writeString] didn't work either, AMSerialDebug showed null was ultimately being sent
+		// TODO: introduce size_t length into callbacks, and don't ever rely on null termination
+		// FIXME: roll this section into callbacks when that is done
       
-      // Writing directly not via callback as we are no longer 20 bytes long
-      // Also, null terminated strings surely don't work here as we've got hex bytes in the command which are often 0.
-			// Also also, using [self writeString] didn't work either, AMSerialDebug showed null was ultimately being sent
-      // TODO: introduce size_t length into callbacks, and don't ever rely on null termination
-      // FIXME: roll this section into callbacks when that is done
-      
-			// Clear read buffer
-			[port readAndReturnError:nil]; // is this the right command?
-			
-			// Write command
-			[port writeBytes:command length:length error:nil];
-			
-			// Wait for Acknowledgement
-			NSData* ack = [port readBytes:4 error:nil];
-			
-			// Check acknowledgement			
-			if ([ack isEqual:goodAck])
-			{
-				NSLog(@"EDID part write OK");
-			}
-			else 
-			{
-				NSLog(@"EDID part write failed, ack: %@", ack);
-			}
+		// Clear read buffer
+		[port readAndReturnError:nil]; // is this the right command?
+
+		// Write command
+		[port writeBytes:command length:commandLength error:nil];
+
+		// Wait for Acknowledgement
+		NSData* ack = [port readBytes:4 error:nil];
+
+		// Check acknowledgement			
+		if ([ack isEqual:goodAck])
+		{
+			NSLog(@"EDID part write OK");
+		}
+		else 
+		{
+			NSLog(@"EDID part write failed");
+			SPKLog(@"ACK: %@", ack);
+		}
     }
 }
 @end
