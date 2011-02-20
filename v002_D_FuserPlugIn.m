@@ -49,7 +49,7 @@ void MyTV1ReadCallback(char* result, void* context)
 void MyTV1WriteCallback(char* command, void* context)
 {
 	//printf("%s", command);
-	[(v002_D_FuserPlugIn*)context writeString:[NSString stringWithCString:command encoding:NSASCIIStringEncoding] priority:v002DFuserWriteHighPiority];
+	[(v002_D_FuserPlugIn*)context writeString:[NSString stringWithCString:command encoding:NSASCIIStringEncoding] priority:v002DFuserWriteHighPriority];
 }	 
 
 #pragma mark -
@@ -617,7 +617,7 @@ void MyTV1WriteCallback(char* command, void* context)
 #pragma mark Mixer & Serial Command Queue
 
 // Add to our command to our write queue
-- (void) writeString:(NSString*)command priority:(v002DFuserWritePiority)priority
+- (void) writeString:(NSString*)command priority:(v002DFuserWritePriority)priority
 {	
 	@synchronized(writeQueue)
 	{
@@ -625,7 +625,7 @@ void MyTV1WriteCallback(char* command, void* context)
 		// High Priority replaces last submitted command 
 		if([writeQueue count] >= kv002DFuserQueueLength)
 		{			
-			if(priority == v002DFuserWriteHighPiority)
+			if(priority == v002DFuserWriteHighPriority)
 			{	
 				[writeQueue replaceObjectAtIndex:[writeQueue count] - 1 withObject:command];
 			}
@@ -720,7 +720,13 @@ void MyTV1WriteCallback(char* command, void* context)
     // SPK-DFuser: Slot 4 is reserved for Triplehead2Go 
     if (index == 3)
     {
-        [self uploadEDID:@"mtx edid" toSlot:3];
+        // Load EDID binary file from resource folder
+        NSString* path = [[NSBundle bundleForClass:[self class]] pathForResource:@"mtx edid" ofType:@"bin"];
+        NSData* edid = [NSData dataWithContentsOfFile:path];
+        
+        NSLog(@"edid path: %@, data: %@", path, edid);
+
+        [self uploadEDID:edid toSlot:3];
     }
   
     // Do for both DVI1 & 2
@@ -728,55 +734,76 @@ void MyTV1WriteCallback(char* command, void* context)
     error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(kTV1SourceRGB2, kTV1WindowIDB, kTV1FunctionAdjustSourceEDID, index) );
 }
 
-- (void) uploadEDID:(NSString*)filename toSlot:(NSUInteger)edidSlot
+- (void) uploadEDID:(NSData*)edidData toSlot:(NSUInteger)edidSlotIndex
 {
-    // Load EDID binary file from resource folder
-    NSString* path = [[NSBundle bundleForClass:[self class]] pathForResource:filename ofType:@"bin"];
-    NSData* edid = [NSData dataWithContentsOfFile:path];
+		// TASK: Check and return if processor's EDID is already correct
+	
+		// ...
+	
+		// TASK: Upload EDID
 
-    NSLog(@"edid path: %@, data: %@", path, edid);
-
+		// This command is reverse engineered from a VB snippet and RS232 comms logged between TVOne test app and unit 
+		
+		// To write EDID, its broken into chunks and sent as a series of extra-long commands
+		// Command: 8 bytes of command (see code below) + 32 bytes of EDID payload + End byte
+		// Acknowledgement: 53 02 40 95 (Hex)
+	
+		char ackBytes[] = {0x53, 0x02, 0x40, 0x95};
+		NSData* goodAck = [NSData dataWithBytes:ackBytes length:4];
+	
+    NSUInteger length = 8+32+1; 
+  
     NSUInteger i,j;
 
     for (i=0; i<256; i=i+32)
     {
-    // our command string is entirely magic numbers translated from a vb code snippet.
-    char command[8+32+1];
+      char command[length];
 
-    command[0] = 0x53;
-    command[1] = 39;
-    command[2] = 0x22;
-    command[3] = 0x7;
-    command[4] = edidSlot;
-    command[5] = 0;
-    command[6] = i / 32;
-    command[7] = 0;
+      command[0] = 0x53;
+      command[1] = 0x27;
+      command[2] = 0x22;
+      command[3] = 0x7;
+      command[4] = edidSlotIndex; // as per edidSlotArray
+      command[5] = 0;
+      command[6] = i / 32; // ie. chunk index
+      command[7] = 0;
+        
+      for (j=0; j<32; j++)
+      {
+          if (i+j < [edidData length]) 
+              [edidData getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
+          else 
+              *(command+8+j) = 0;
+      }
+
+      command[8+32] = 0x3F;
+
+      NSLog(@"EDID command: %@", [NSData dataWithBytes:command length:length]);
       
-    for (j=0; j<32; j++)
-    {
-     if (i+j < [edid length]) 
-       [edid getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
-     else 
-       *(command+8+j) = 0;
-    }
+      // Writing directly not via callback as we are no longer 20 bytes long
+      // Also, null terminated strings surely don't work here as we've got hex bytes in the command which are often 0.
+			// Also also, using [self writeString] didn't work either, AMSerialDebug showed null was ultimately being sent
+      // TODO: introduce size_t length into callbacks, and don't ever rely on null termination
+      // FIXME: roll this section into callbacks when that is done
       
-    for (j=0; j<32; j++)
-    {
-        if (i+j < [edid length]) 
-            [edid getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
-        else 
-            *(command+8+j) = 0;
-    }
-
-    command[9+32] = 63;
-
-    NSLog(@"command: %@", [NSData dataWithBytes:command length:43]);
-
-    error = tv1SubmitSerialCommand( command );
-
-    if (error != kTV1NoError)
-        NSLog(@"Error writing EDID");
-
+			// Clear read buffer
+			[port readAndReturnError:nil]; // is this the right command?
+			
+			// Write command
+			[port writeBytes:command length:length error:nil];
+			
+			// Wait for Acknowledgement
+			NSData* ack = [port readBytes:4 error:nil];
+			
+			// Check acknowledgement			
+			if ([ack isEqual:goodAck])
+			{
+				NSLog(@"EDID part write OK");
+			}
+			else 
+			{
+				NSLog(@"EDID part write failed, ack: %@", ack);
+			}
     }
 }
 @end

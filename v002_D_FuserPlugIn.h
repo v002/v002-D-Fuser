@@ -13,9 +13,9 @@
 
 // Do we even need this? I dont know.
 typedef enum {
-	v002DFuserWriteLowPiority = 0,
-	v002DFuserWriteHighPiority = 1
-} v002DFuserWritePiority;
+	v002DFuserWriteLowPriority = 0,
+	v002DFuserWriteHighPriority = 1
+} v002DFuserWritePriority;
 
 #define kv002DFuserQueueLength 5
 
@@ -92,7 +92,7 @@ typedef enum {
 
 
 // This does our reading and writing to our read and write queues (the actuall serial port stuff happens in a thread)
-- (void) writeString:(NSString*)command priority:(v002DFuserWritePiority)priority;
+- (void) writeString:(NSString*)command priority:(v002DFuserWritePriority)priority;
 - (NSString*) readString;
 
 // color specifics
@@ -104,5 +104,5 @@ typedef enum {
 - (void) initializeSerialPortSettings;
 - (void) setResolution:(NSUInteger)index;
 - (void) setEDID:(NSUInteger)index;
-- (void) uploadEDID:(NSString*)filename toSlot:(NSUInteger)edidSlot;
+- (void) uploadEDID:(NSData*)edidData toSlot:(NSUInteger)edidSlotIndex;
 @end
