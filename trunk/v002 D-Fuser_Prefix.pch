@@ -1,3 +1,9 @@
 #ifdef __OBJC__
 	#import <Quartz/Quartz.h>
 #endif
+
+#ifdef SPKLOGGING
+#define SPKLog(...) (void)printf("%s: %s\n", __PRETTY_FUNCTION__, [[NSString stringWithFormat:__VA_ARGS__] UTF8String])
+#else
+#define SPKLog(...)
+#endif
