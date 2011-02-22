@@ -97,7 +97,6 @@ typedef enum {
 
 // Private constant
 #define AMSER_MAXBUFSIZE  4096UL
-//#define AMSER_MAXBUFSIZE  21UL
 
 extern NSString *const AMSerialErrorDomain;
 
