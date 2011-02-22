@@ -736,6 +736,13 @@ void MyTV1WriteCallback(char* command, void* context)
 
 - (void) uploadEDID:(NSData*)edidData toSlot:(NSUInteger)edidSlotIndex
 {
+	// The EDID commands are differently formed and take longer than typical to process.
+	// Therefore we're setting a higher timeout and generally handling this manually.
+	NSTimeInterval serialReadTimeoutOriginal = [port readTimeout];
+	[port setReadTimeout:2];
+	
+	BOOL ackFail = NO;
+	
 	NSUInteger commandLength, ackLength; 
 	NSUInteger i,j;
 	
@@ -752,8 +759,8 @@ void MyTV1WriteCallback(char* command, void* context)
 	
 	char readEDIDBytes[256];
 	NSData* readEDIDData;
-	
-    for (i=0; i<[edidData length]; i=i+32)
+
+	for (i=0; i<[edidData length]; i=i+32)
     {
 		char command[commandLength];
 		
@@ -767,24 +774,52 @@ void MyTV1WriteCallback(char* command, void* context)
 		command[7] = 0;
 		command[8] = 0x3F;
 		
+		SPKLog(@"cmd: %@", [NSData dataWithBytes:command length:commandLength]);
+		
 		// Clear read buffer
-		[port readAndReturnError:nil]; // is this the right command?
+		if ([port bytesAvailable]) [port readAndReturnError:nil];
 		
 		// Write command
 		[port writeBytes:command length:commandLength error:nil];
-		
+
 		// Wait for Acknowledgement
 		NSData* ack = [port readBytes:ackLength error:nil];
 		
 		SPKLog(@"ack: %@", ack);
 		
-		for (j=0; j<32; j++)
+		if ([ack length] == ackLength) // We should also test for success bit.
 		{
-			if (8+j < [ack length]) 
-				[ack getBytes:(readEDIDBytes+i+j) range:NSMakeRange(8+j, 1)];
-			else 
-				*(readEDIDBytes+i+j) = 0;
+			for (j=0; j<32; j++)
+			{
+				if (8+j < [ack length]) 
+					[ack getBytes:(readEDIDBytes+i+j) range:NSMakeRange(8+j, 1)];
+				else 
+					*(readEDIDBytes+i+j) = 0;
+			}
 		}
+		else
+		{
+			SPKLog(@"Failed to read EDID part");
+			ackFail = YES;
+			break;
+		}
+		
+		// I am quite aware this looks insane. 
+		// Ideally all EDID serial would be rolled into [self writeString] with custom timing etc.
+		// The TVOne has successfully replied with the EDID part, and yet if you ask it straight away for the next part, it will fail perfectly predictably.
+		// Note no such restriction when writing. Crazy.
+		// If the sleep value is 0.5 it will fail on the fourth read. You try getting it to work without.
+		sleep(1);
+	}
+	
+	// If we failed on an acknowledgement, lets bail as we can't trust the result.
+	// (Using ackFail so can reattempt read/write in future version)
+	if (ackFail) 
+	{
+		NSLog(@"Failed to read existing EDID, bailing before write");
+		
+		[port setReadTimeout:serialReadTimeoutOriginal];
+		return;
 	}
 	
 	// We want to compare like-for-like, so using length of edidData rather than full 256
@@ -794,9 +829,7 @@ void MyTV1WriteCallback(char* command, void* context)
 	{
 		NSLog(@"Correct EDID already present, skipping upload");
 		
-		// Seem to need pause here for TVOne to catch up with itself. Don't understand, but whatever.
-		[port readAndReturnError:nil];
-		
+		[port setReadTimeout:serialReadTimeoutOriginal];
 		return;
 	}
 	else
@@ -813,16 +846,18 @@ void MyTV1WriteCallback(char* command, void* context)
 	// To write EDID, its broken into chunks and sent as a series of extra-long commands
 	// Command: 8 bytes of command (see code below) + 32 bytes of EDID payload + End byte
 	// Acknowledgement: 53 02 40 95 (Hex)
+	
+	ackFail = NO;
 
-    commandLength = 8+32+1;
+	commandLength = 8+32+1;
 	ackLength = 4;
 
 	char ackBytes[] = {0x53, 0x02, 0x40, 0x95};
 	NSData* goodAck = [NSData dataWithBytes:ackBytes length:ackLength];
-	
+
 	// We want to upload full EDID slot, ie. zero out to 256 even if edidData is only 128bytes.
-    for (i=0; i<256; i=i+32)
-    {
+	for (i=0; i<256; i=i+32)
+	{
 		char command[commandLength];
 
 		command[0] = 0x53;
@@ -837,9 +872,9 @@ void MyTV1WriteCallback(char* command, void* context)
 		for (j=0; j<32; j++)
 		{
 		  if (i+j < [edidData length]) 
-			  [edidData getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
+			[edidData getBytes:(command+8+j) range:NSMakeRange(i+j, 1)];
 		  else 
-			  *(command+8+j) = 0;
+			*(command+8+j) = 0;
 		}
 
 		command[8+32] = 0x3F;
@@ -851,26 +886,34 @@ void MyTV1WriteCallback(char* command, void* context)
 		// Also also, using [self writeString] didn't work either, AMSerialDebug showed null was ultimately being sent
 		// TODO: introduce size_t length into callbacks, and don't ever rely on null termination
 		// FIXME: roll this section into callbacks when that is done
-      
+		
 		// Clear read buffer
-		[port readAndReturnError:nil]; // is this the right command?
-
+		if ([port bytesAvailable]) [port readAndReturnError:nil];
+		
 		// Write command
 		[port writeBytes:command length:commandLength error:nil];
 
 		// Wait for Acknowledgement
-		NSData* ack = [port readBytes:4 error:nil];
+		NSData* ack = [port readBytes:ackLength error:nil];
 
 		// Check acknowledgement			
 		if ([ack isEqual:goodAck])
 		{
-			NSLog(@"EDID part write OK");
+			SPKLog(@"EDID part write OK");
 		}
 		else 
 		{
-			NSLog(@"EDID part write failed");
-			SPKLog(@"ACK: %@", ack);
+			ackFail = YES;
+			break;
+			SPKLog(@"EDID part write failed. ACK: %@", ack);
 		}
-    }
+	}
+	
+	if (ackFail)
+	{
+		NSLog(@"EDID Write failed. And possibly corrupted the entry. You should retry.");
+	}
+	
+	[port setReadTimeout:serialReadTimeoutOriginal];
 }
 @end

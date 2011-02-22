@@ -326,7 +326,7 @@ typedef unsigned int kTV1Error;
 #define kTV1Resolution1080p30				0x5F				
 #define kTV1Resolution1080p50				0x60				
 #define kTV1Resolution1080p5996				0x61		
-#define kTV1Resolution1080p60				0x62				
+#define kTV1Resolution1080p60				0x6A		// found as 0x62=98 firmware 362 has 1080P/60 as 106 = 0x6A. Uh-oh...		
 #define kTV1Resolution1080p75				0x66		
 #define kTV1ResolutionWUXGAp60				0x69						
 #define kTV1ResolutionWUXGAp75				0x6C						
@@ -358,15 +358,15 @@ typedef unsigned int kTV1Error;
 #define kTV1ResolutionDescriptionUXGAp75			"UXGA (1600x1200) @ 75Hz" 						
 #define kTV1ResolutionDescriptionUXGAp85			"UXGA (1600x1200) @ 85Hz"
 #define kTV1ResolutionDescriptionWSXGAPLUSp60     "WSXGA+ (1680x1050) @ 60Hz"
-#define kTV1ResolutionDescription1080p2398			"1080p (1920x1080) @ 23.98Hz" 					
+#define kTV1ResolutionDescription1080p2398		"1080p (1920x1080) @ 23.98Hz" 					
 #define kTV1ResolutionDescription1080p24			"1080p (1920x1080) @ 24Hz"						
 #define kTV1ResolutionDescription1080p25			"1080p (1920x1080) @ 25Hz"						
-#define kTV1ResolutionDescription1080p2997			"1080p (1920x1080) @ 29.97Hz"					
+#define kTV1ResolutionDescription1080p2997		"1080p (1920x1080) @ 29.97Hz"					
 #define kTV1ResolutionDescription1080p30			"1080p (1920x1080) @ 30Hz"						
 #define kTV1ResolutionDescription1080p50			"1080p (1920x1080) @ 50Hz"						
-#define kTV1ResolutionDescription1080p5996			"1080p (1920x1080) @ 59.94Hz"
+#define kTV1ResolutionDescription1080p5996		"1080p (1920x1080) @ 59.94Hz"
 #define kTV1ResolutionDescription1080p60			"1080p (1920x1080) @ 60Hz"						
-#define kTV1ResolutionDescription1080p75            "1080p (1920x1080) @ 75Hz"	
+#define kTV1ResolutionDescription1080p75      "1080p (1920x1080) @ 75Hz"	
 #define kTV1ResolutionDescriptionWUXGAp60			"WUXGA (1920x1200) @ 60Hz"						
 #define kTV1ResolutionDescriptionWUXGAp75			"WUXGA (1920x1200) @ 75Hz"						
 #define kTV1ResolutionDescriptionWUXGAp85			"WUXGA (1920x1200) @ 85Hz"	
