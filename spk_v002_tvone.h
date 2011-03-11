@@ -35,7 +35,8 @@
 #pragma mark READ ME: Timing info.
 // Ok, here is the deal. You dont want to send serial commands faster than:
 
-#define kTV1MaxSendSpeedLim 0.030
+//#define kTV1MaxSendSpeedLim 0.030 // TBZ: What we found you want for fade commands. But now causing TVOne overload?
+#define kTV1MaxSendSpeedLim 0.060 // TBZ: Key commands take longer to process than fade commands. Reverting to... 100ms as per TVOne advice?
 
 // Miliseconds between commands, otherwise you can fill the command buffer
 // and that takes 1 second to flush - assuming you actually stop sending...
@@ -634,7 +635,11 @@ kTV1Error tv1InitializeMixer()
 	if(error == kTV1NoError)
 		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDZ, kTV1FunctionAdjustWindowsEnable, 0) );
 	
-	//TODO: Ensure Window Priority is correct
+	// Set Window Priority. abABZ, 12345
+	if(error == kTV1NoError)
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustWindowsLayerPriority, 1) );
+	if(error == kTV1NoError)
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustWindowsLayerPriority, 2) );
 	
   // Disable Evil HDCP
   if(error == kTV1NoError)
