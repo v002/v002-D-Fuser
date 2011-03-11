@@ -23,8 +23,11 @@ static NSMutableArray* serialPortArray;
 // all of our hard coded resolutions, and their strings.
 static NSArray* resolutionsArray;
 
-// all of our EDID slots, and their strings
-static NSArray* edidSlotArray;
+// all of our EDID slots names
+static NSArray* edidSlotNames;
+
+// all of our keyer setting names
+static NSArray* keyerSettingNames;
 
 #pragma mark -
 #pragma mark TV1 Library Read and Write callbacks
@@ -63,15 +66,9 @@ void MyTV1WriteCallback(char* command, void* context)
 @dynamic inputMaxFadeChannel2;
 
 @dynamic inputEnableKeyer;
-@dynamic inputKeyColorMin;
-@dynamic inputKeyColorMax;
-@dynamic inputKeySwap;
-@dynamic inputKeyInvertY;
-@dynamic inputKeyInvertU;
-@dynamic inputKeyInvertV;
-@dynamic inputKeySoftnessY;
-@dynamic inputKeySoftnessU;
-@dynamic inputKeySoftnessV;
+@dynamic inputKeyerMode;
+@dynamic inputKeyerParameters;
+@dynamic inputSwapChannels;
 
 @dynamic inputBackgroundColor;
 
@@ -84,6 +81,8 @@ void MyTV1WriteCallback(char* command, void* context)
 
 @dynamic inputReInitializeMixer;
 @dynamic inputLockPanel;
+
+@synthesize keyerSettings;
 
 + (NSDictionary*) attributes
 {
@@ -118,8 +117,8 @@ void MyTV1WriteCallback(char* command, void* context)
 													[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1ResolutionUXGAp60],		@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescriptionUXGAp60		encoding:NSASCIIStringEncoding], @"description", nil],
 													[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1ResolutionUXGAp75],		@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescriptionUXGAp75		encoding:NSASCIIStringEncoding], @"description", nil],
 													[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1ResolutionUXGAp85],		@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescriptionUXGAp85		encoding:NSASCIIStringEncoding], @"description", nil],
-                          [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1ResolutionWSXGAPLUSp60],		@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescriptionWSXGAPLUSp60		encoding:NSASCIIStringEncoding], @"description", nil],
-                          [NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1Resolution1080p2398],	@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescription1080p2398	encoding:NSASCIIStringEncoding], @"description", nil],
+													[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1ResolutionWSXGAPLUSp60],		@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescriptionWSXGAPLUSp60		encoding:NSASCIIStringEncoding], @"description", nil],
+													[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1Resolution1080p2398],	@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescription1080p2398	encoding:NSASCIIStringEncoding], @"description", nil],
 													[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1Resolution1080p24],		@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescription1080p24		encoding:NSASCIIStringEncoding], @"description", nil],
 													[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1Resolution1080p25],		@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescription1080p25		encoding:NSASCIIStringEncoding], @"description", nil],
 													[NSDictionary dictionaryWithObjectsAndKeys:[NSNumber numberWithUnsignedInt:kTV1Resolution1080p2997],	@"resolutionNum", [NSString stringWithCString:kTV1ResolutionDescription1080p2997	encoding:NSASCIIStringEncoding], @"description", nil],
@@ -136,7 +135,9 @@ void MyTV1WriteCallback(char* command, void* context)
 
 													nil] retain];
 		
-  edidSlotArray = [[NSArray arrayWithObjects:	@"Memory 1", @"Memory 2", @"Memory 3", @"MATROX TH2GO", @"3D", @"HDMI", @"DVI", @"Monitor", nil] retain];
+	edidSlotNames = [[NSArray arrayWithObjects:	@"Memory 1", @"Memory 2", @"Memory 3", @"MATROX TH2GO", @"3D", @"HDMI", @"DVI", @"Monitor", nil] retain];
+	
+	keyerSettingNames = [[NSArray arrayWithObjects: @"Black", @"White", @"Blue", @"Custom", nil] retain]; 
   
 	// get our list of serial ports.
 	serialPortArray = [[NSMutableArray arrayWithCapacity:2] retain];
@@ -181,47 +182,24 @@ void MyTV1WriteCallback(char* command, void* context)
 	// Keying
 	
 	if([key isEqualToString:@"inputEnableKeyer"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Enable Keyer", QCPortAttributeNameKey, nil];	
-	
-	if([key isEqualToString:@"inputKeyColorMin"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Color Min", QCPortAttributeNameKey, nil];	
+		return [NSDictionary dictionaryWithObjectsAndKeys:@"Enable Keyer on 1", QCPortAttributeNameKey, nil];	
 
-	if([key isEqualToString:@"inputKeyColorMax"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Color Max", QCPortAttributeNameKey, nil];	
+	if([key isEqualToString:@"inputKeyerMode"])
+		return [NSDictionary dictionaryWithObjectsAndKeys:@"Keyer Mode", QCPortAttributeNameKey,
+				keyerSettingNames, QCPortAttributeMenuItemsKey,
+				[NSNumber numberWithInt:0], QCPortAttributeDefaultValueKey,
+				[NSNumber numberWithInt:[keyerSettingNames count] -1], QCPortAttributeMaximumValueKey, nil];
+	
+	if([key isEqualToString:@"inputKeyerParameters"])
+		return [NSDictionary dictionaryWithObjectsAndKeys:@"Keyer Parameters", QCPortAttributeNameKey, nil];
+	
+	if([key isEqualToString:@"inputSwapChannels"])
+		return [NSDictionary dictionaryWithObjectsAndKeys:@"Swap Inputs", QCPortAttributeNameKey, nil];
 
 	// Not technically part of Keyer controls but...
 	if([key isEqualToString:@"inputBackgroundColor"])
 		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Background Color", QCPortAttributeNameKey, nil];	
-	
-	if([key isEqualToString:@"inputKeySwap"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Swap Channels", QCPortAttributeNameKey, nil];
 
-	if([key isEqualToString:@"inputKeyInvertY"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Invert Y", QCPortAttributeNameKey, nil];
-
-	if([key isEqualToString:@"inputKeyInvertU"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Invert U", QCPortAttributeNameKey, nil];
-
-	if([key isEqualToString:@"inputKeyInvertV"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Invert V", QCPortAttributeNameKey, nil];
-
-	if([key isEqualToString:@"inputKeySoftnessY"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Softness Y", QCPortAttributeNameKey, 
-				[NSNumber numberWithDouble:0.0], QCPortAttributeDefaultValueKey,
-				[NSNumber numberWithDouble:0.0], QCPortAttributeMinimumValueKey,
-				[NSNumber numberWithDouble:1.0], QCPortAttributeMaximumValueKey, nil];	
-	
-	if([key isEqualToString:@"inputKeySoftnessU"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Softness U", QCPortAttributeNameKey, 
-				[NSNumber numberWithDouble:0.0], QCPortAttributeDefaultValueKey,
-				[NSNumber numberWithDouble:0.0], QCPortAttributeMinimumValueKey,
-				[NSNumber numberWithDouble:1.0], QCPortAttributeMaximumValueKey, nil];	
-
-	if([key isEqualToString:@"inputKeySoftnessV"])
-		return [NSDictionary dictionaryWithObjectsAndKeys:@"Key Softness V", QCPortAttributeNameKey, 
-				[NSNumber numberWithDouble:0.0], QCPortAttributeDefaultValueKey,
-				[NSNumber numberWithDouble:0.0], QCPortAttributeMinimumValueKey,
-				[NSNumber numberWithDouble:1.0], QCPortAttributeMaximumValueKey, nil];	
 	// End Keying
 	
 	
@@ -229,7 +207,7 @@ void MyTV1WriteCallback(char* command, void* context)
 		return [NSDictionary dictionaryWithObjectsAndKeys:@"Output Resolution", QCPortAttributeNameKey, [resolutionsArray valueForKey:@"description"], QCPortAttributeMenuItemsKey, [NSNumber numberWithInt:0], QCPortAttributeDefaultValueKey, [NSNumber numberWithInt:0], QCPortAttributeMinimumValueKey, [NSNumber numberWithInt:[resolutionsArray count] -1], QCPortAttributeMaximumValueKey, nil];
 	
   if([key isEqualToString:@"inputMixerEDIDEmulation"])
-    return [NSDictionary dictionaryWithObjectsAndKeys:@"EDID Emulation", QCPortAttributeNameKey, edidSlotArray, QCPortAttributeMenuItemsKey, [NSNumber numberWithInt:6], QCPortAttributeDefaultValueKey, [NSNumber numberWithInt:0], QCPortAttributeMinimumValueKey, [NSNumber numberWithInt:[edidSlotArray count] -1], QCPortAttributeMaximumValueKey, nil];
+    return [NSDictionary dictionaryWithObjectsAndKeys:@"EDID Emulation", QCPortAttributeNameKey, edidSlotNames, QCPortAttributeMenuItemsKey, [NSNumber numberWithInt:6], QCPortAttributeDefaultValueKey, [NSNumber numberWithInt:0], QCPortAttributeMinimumValueKey, [NSNumber numberWithInt:[edidSlotNames count] -1], QCPortAttributeMaximumValueKey, nil];
   
     // Utility
     
@@ -255,24 +233,18 @@ void MyTV1WriteCallback(char* command, void* context)
 {
 	return [NSArray arrayWithObjects:@"inputSerialPort",
 									@"inputMixerResolution",
-                  @"inputMixerEDIDEmulation",
+									@"inputMixerEDIDEmulation",
 									@"inputMaxFadeChannel1",	// Mixing
 									@"inputMaxFadeChannel2",
 									@"inputEnableKeyer",		// Keying
-									@"inputKeyColorMax", 
-                  @"inputKeyColorMin", 
+									@"inputKeyerMode",
+									@"inputKeyerParameters",
+									@"inputSwapChannels",
 									@"inputBackgroundColor",
-									@"inputKeySwap",
-									@"inputKeySoftnessY",
-									@"inputKeySoftnessU",
-									@"inputKeySoftnessV",
-									@"inputKeyInvertY",
-									@"inputKeyInvertU",
-									@"inputKeyInvertV",
-                  @"inputWindow1AspectRatio", // Aspect
-                  @"inputWindow2AspectRatio",
-                  @"inputLockPanel",          // Utility
-                  @"inputReInitializeMixer",
+									@"inputWindow1AspectRatio", // Aspect
+									@"inputWindow2AspectRatio",
+									@"inputLockPanel",          // Utility
+									@"inputReInitializeMixer",
                                     
 									nil];
 }
@@ -294,8 +266,61 @@ void MyTV1WriteCallback(char* command, void* context)
 	{
         error = kTV1NoError;
         
-		writeQueue = [[NSMutableArray alloc] initWithCapacity:5];
-		readQueue =  [[NSMutableArray alloc] initWithCapacity:5];
+		writeQueue = [[NSMutableArray alloc] initWithCapacity:kv002DFuserQueueLength];
+		readQueue =  [[NSMutableArray alloc] initWithCapacity:kv002DFuserQueueLength];
+		
+		keyerSettings = [[NSMutableDictionary alloc] initWithCapacity:4];
+		[keyerSettings setObject:[NSMutableDictionary dictionaryWithObjectsAndKeys:
+								  [NSNumber numberWithInt:0], @"minY",
+								  [NSNumber numberWithInt:18], @"maxY",
+								  [NSNumber numberWithInt:0], @"softY",
+								  [NSNumber numberWithInt:0], @"minU",
+								  [NSNumber numberWithInt:255], @"maxU",
+								  [NSNumber numberWithInt:0], @"softU",
+								  [NSNumber numberWithInt:0], @"minV",
+								  [NSNumber numberWithInt:255], @"maxV",
+								  [NSNumber numberWithInt:0], @"softV",
+								  nil]
+						  forKey:@"Black"];
+		 
+		[keyerSettings setObject:[NSMutableDictionary dictionaryWithObjectsAndKeys:
+								  [NSNumber numberWithInt:0], @"minY",
+								  [NSNumber numberWithInt:255], @"maxY",
+								  [NSNumber numberWithInt:10], @"softY",
+								  [NSNumber numberWithInt:0], @"minU",
+								  [NSNumber numberWithInt:255], @"maxU",
+								  [NSNumber numberWithInt:10], @"softU",
+								  [NSNumber numberWithInt:0], @"minV",
+								  [NSNumber numberWithInt:255], @"maxV",
+								  [NSNumber numberWithInt:10], @"softV",
+								  nil]
+							forKey:@"White"];
+		
+		[keyerSettings setObject:[NSMutableDictionary dictionaryWithObjectsAndKeys:
+								  [NSNumber numberWithInt:0], @"minY",
+								  [NSNumber numberWithInt:255], @"maxY",
+								  [NSNumber numberWithInt:10], @"softY",
+								  [NSNumber numberWithInt:0], @"minU",
+								  [NSNumber numberWithInt:255], @"maxU",
+								  [NSNumber numberWithInt:10], @"softU",
+								  [NSNumber numberWithInt:0], @"minV",
+								  [NSNumber numberWithInt:255], @"maxV",
+								  [NSNumber numberWithInt:10], @"softV",
+								  nil]
+							 forKey:@"Blue"];
+		
+		[keyerSettings setObject:[NSMutableDictionary dictionaryWithObjectsAndKeys:
+								  [NSNumber numberWithInt:0], @"minY",
+								  [NSNumber numberWithInt:255], @"maxY",
+								  [NSNumber numberWithInt:10], @"softY",
+								  [NSNumber numberWithInt:0], @"minU",
+								  [NSNumber numberWithInt:255], @"maxU",
+								  [NSNumber numberWithInt:10], @"softU",
+								  [NSNumber numberWithInt:0], @"minV",
+								  [NSNumber numberWithInt:255], @"maxV",
+								  [NSNumber numberWithInt:10], @"softV",
+								  nil] 
+						  forKey:@"Custom"];
 		
 		tv1RegisterSerialReadCallback(MyTV1ReadCallback, self);
 		tv1RegisterSerialWriteCallback(MyTV1WriteCallback, self);
@@ -319,7 +344,7 @@ void MyTV1WriteCallback(char* command, void* context)
 
 + (NSArray*) plugInKeys
 {
-	return nil;
+	return [NSArray arrayWithObjects:@"keyerSettings", nil];
 }
 
 - (id) serializedValueForKey:(NSString*)key;
@@ -395,53 +420,129 @@ void MyTV1WriteCallback(char* command, void* context)
 	
 #pragma mark -
 #pragma mark Keyer Handling
-	// Note: All key commands apply to kTV1WindowIDB, since the keyer is on B, and B is 'above' A.
+	// Note: All key commands apply to kTV1WindowIDA, as A is 'above' B. (Note this is changed behaviour, Channel 1 has to be above Channel 2 as thats how they sit in the inspector, one fade slider above the other)
 	
 	if([self didValueForInputKeyChange:@"inputEnableKeyer"])
-		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustKeyerEnable, (unsigned int) self.inputEnableKeyer) );
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerEnable, (unsigned int) self.inputEnableKeyer) );
 
-	if([self didValueForInputKeyChange:@"inputKeyColorMin"])
-		// releases CGColorCopy
-		[self writeKeyColorMin:CGColorCreateCopy(self.inputKeyColorMin)];	
+	if([self didValueForInputKeyChange:@"inputKeyerParameters"])
+	{
+		// Update appropriate setting(s) in keyerSettings. 
+		// inputKeyerParameters should be a dictionary with either 
+		// - any custom keyer setting parameter(s) as key-value pairs
+		// - whole keyer settings with name as key and dictionary as value
+		
+		// TODO: Check to see whether min+max YUV or NSColor is supplied and act appropriately.
+		NSArray* keyerKeys = [NSArray arrayWithObjects:@"minY", @"minU", @"minV", @"maxY", @"maxU", @"maxV", @"softY", @"softU", @"softV", nil];
+		NSDictionary* input = self.inputKeyerParameters;
+		
+		SPKLog(@"keyerSettings before: %@", keyerSettings);
+		
+		if (!keyerSettings)
+		{
+			NSLog(@"!keyerSettings");
+		}
+		
+		for (id thing in input)
+		{
+			if ([keyerSettingNames containsObject:thing])
+			{
+				// defensive: when being decoded from saved state, can become non-mutable
+				if ([keyerSettings class] != [NSMutableDictionary class])
+				{
+					NSMutableDictionary* mutCopy = [keyerSettings mutableCopy];
+					[keyerSettings release];
+					keyerSettings = mutCopy;
+				}
+				
+				[keyerSettings setObject:[[input objectForKey:thing] mutableCopy] forKey:thing];
+			}
+			else if ([keyerKeys containsObject:thing])
+			{
+				// defensive: when being decoded from saved state, can become non-mutable
+				if ([keyerSettings class] != [NSMutableDictionary class])
+				{
+					NSMutableDictionary* mutCopy = [keyerSettings mutableCopy];
+					[keyerSettings release];
+					keyerSettings = mutCopy;
+				}
+				if ([[keyerSettings valueForKey:@"Custom"] class] != [NSMutableDictionary class])
+				{
+					NSMutableDictionary* mutCopy = [[keyerSettings valueForKey:@"Custom"] mutableCopy];
+					[keyerSettings setObject:mutCopy forKey:@"Custom"];
+				}
 
-	if([self didValueForInputKeyChange:@"inputKeyColorMax"])
-		// releases CGColor copy
-		[self writeKeyColorMax:CGColorCreateCopy(self.inputKeyColorMax)];	
+				[[keyerSettings valueForKey:@"Custom"] setObject:[input objectForKey:thing] forKey:thing];
+			}
+			else
+			{
+				NSLog(@"Unusable structure key in Keyer Parameters: %@", thing);
+			}
+		}
+		
+		SPKLog(@"keyerSettings after: %@", keyerSettings);
+	}
+	
+	if([self didValueForInputKeyChange:@"inputKeyerMode"] || [self didValueForInputKeyChange:@"inputKeyerParameters"])
+	{
+		NSDictionary* keySetting = [keyerSettings valueForKey:[keyerSettingNames objectAtIndex:self.inputKeyerMode]];
+		// TODO: Check to see whether min+max YUV or NSColor is in dict and act appropriately. 
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerMinY, [[keySetting valueForKey:@"minY"] unsignedIntValue]) );
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerMinU, [[keySetting valueForKey:@"minU"] unsignedIntValue]) );
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerMinV, [[keySetting valueForKey:@"minV"] unsignedIntValue]) );
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerMaxY, [[keySetting valueForKey:@"maxY"] unsignedIntValue]) );
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerMaxU, [[keySetting valueForKey:@"maxU"] unsignedIntValue]) );
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerMaxV, [[keySetting valueForKey:@"maxV"] unsignedIntValue]) );
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerSoftnessY, [[keySetting valueForKey:@"softY"] unsignedIntValue]) );
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerSoftnessU, [[keySetting valueForKey:@"softU"] unsignedIntValue]) );
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerSoftnessV, [[keySetting valueForKey:@"softV"] unsignedIntValue]) );
+	}
+	
+	if([self didValueForInputKeyChange:@"inputSwapChannels"])
+	{
+		BOOL swapped = self.inputSwapChannels;
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustWindowsWindowSource, swapped ? kTV1SourceRGB2 : kTV1SourceRGB1) );	
+		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustWindowsWindowSource, swapped ? kTV1SourceRGB1 : kTV1SourceRGB2) );
+	}
+		
+	
+//	if([self didValueForInputKeyChange:@"inputKeyColorMin"])
+//		// releases CGColorCopy
+//		[self writeKeyColorMin:CGColorCreateCopy(self.inputKeyColorMin)];	
+//
+//	if([self didValueForInputKeyChange:@"inputKeyColorMax"])
+//		// releases CGColor copy
+//		[self writeKeyColorMax:CGColorCreateCopy(self.inputKeyColorMax)];	
 
 	if([self didValueForInputKeyChange:@"inputBackgroundColor"])
 		// releases CGColor copy
 		[self writeBGColor:CGColorCreateCopy(self.inputBackgroundColor)];	
 	
-	
-	if([self didValueForInputKeyChange:@"inputKeySoftnessY"])
-		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustKeyerSoftnessY, (unsigned int) floor(self.inputKeySoftnessY * 255)) );
-
-	if([self didValueForInputKeyChange:@"inputKeySoftnessU"])
-		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustKeyerSoftnessU, (unsigned int) floor(self.inputKeySoftnessU * 255)) );
-
-	if([self didValueForInputKeyChange:@"inputKeySoftnessV "])
-		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustKeyerSoftnessV, (unsigned int) floor(self.inputKeySoftnessV * 255)) );
-		
-	if([self didValueForInputKeyChange:@"inputKeySwap"])
-		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustKeyerSwap, (unsigned int) self.inputKeySwap) );
-
-	if([self didValueForInputKeyChange:@"inputKeyInvertY"])
-		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustKeyerInvertY, (unsigned int) self.inputKeyInvertY) );
-		
-	if([self didValueForInputKeyChange:@"inputKeyInvertU"])
-		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustKeyerInvertU, (unsigned int) self.inputKeyInvertU) );
-
-	if([self didValueForInputKeyChange:@"inputKeyInvertV"]) // TYPO IN MANUAL - softness for V is noted as 156
-		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustKeyerInvertV, (unsigned int) self.inputKeyInvertV) );		
+//	if([self didValueForInputKeyChange:@"inputKeySoftnessY"])
+//		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerSoftnessY, (unsigned int) floor(self.inputKeySoftnessY * 255)) );
+//
+//	if([self didValueForInputKeyChange:@"inputKeySoftnessU"])
+//		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerSoftnessU, (unsigned int) floor(self.inputKeySoftnessU * 255)) );
+//
+//	if([self didValueForInputKeyChange:@"inputKeySoftnessV "])
+//		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerSoftnessV, (unsigned int) floor(self.inputKeySoftnessV * 255)) );
+//		
+//	if([self didValueForInputKeyChange:@"inputKeySwap"]) // 760 not 750 function?
+//		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerSwap, (unsigned int) self.inputKeySwap) );
+//
+//	if([self didValueForInputKeyChange:@"inputKeyInvertY"])
+//		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerInvertY, (unsigned int) self.inputKeyInvertY) );
+//		
+//	if([self didValueForInputKeyChange:@"inputKeyInvertU"])
+//		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerInvertU, (unsigned int) self.inputKeyInvertU) );
+//
+//	if([self didValueForInputKeyChange:@"inputKeyInvertV"]) // TYPO IN MANUAL - softness for V is noted as 156
+//		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDA, kTV1FunctionAdjustKeyerInvertV, (unsigned int) self.inputKeyInvertV) );		
 
 	
 #pragma mark -
 #pragma mark Aspect Ratio handling
     
-    if([self didValueForInputKeyChange:@"inputKeyInvertV"]) // TYPO IN MANUAL - softness for V is noted as 156
-		error = tv1SubmitSerialCommand( tv1CreateSerialCommandString(0, kTV1WindowIDB, kTV1FunctionAdjustKeyerInvertV, (unsigned int) self.inputKeyInvertV) );		
-
-	
 	
 	return YES;
 }
@@ -452,6 +553,8 @@ void MyTV1WriteCallback(char* command, void* context)
 
 - (void) stopExecution:(id<QCPlugInContext>)context
 {
+	// We have to release the port when we stop
+	[port release];
 }
 
 #pragma mark  -
@@ -768,7 +871,7 @@ void MyTV1WriteCallback(char* command, void* context)
 		command[1] = 0x07;
 		command[2] = 0xA2;
 		command[3] = 0x7;
-		command[4] = edidSlotIndex; // as per edidSlotArray
+		command[4] = edidSlotIndex; // as per edidSlotNames
 		command[5] = 0;
 		command[6] = i / 32; // ie. chunk index
 		command[7] = 0;
@@ -864,7 +967,7 @@ void MyTV1WriteCallback(char* command, void* context)
 		command[1] = 0x27;
 		command[2] = 0x22;
 		command[3] = 0x7;
-		command[4] = edidSlotIndex; // as per edidSlotArray
+		command[4] = edidSlotIndex; // as per edidSlotNames
 		command[5] = 0;
 		command[6] = i / 32; // ie. chunk index
 		command[7] = 0;

@@ -12,12 +12,13 @@
 #import "AMSerialPort.h"
 
 // Do we even need this? I dont know.
+// TBZ: What we need is a 'can previous ones of me be dropped' flag, ie. for fading, and a 'i take longer to process' flag, ie. for keying etc. 
 typedef enum {
 	v002DFuserWriteLowPriority = 0,
 	v002DFuserWriteHighPriority = 1
 } v002DFuserWritePriority;
 
-#define kv002DFuserQueueLength 5
+#define kv002DFuserQueueLength 9
 
 @interface v002_D_FuserPlugIn : QCPlugIn
 {
@@ -37,6 +38,8 @@ typedef enum {
 	NSMutableArray* readQueue;
 
 	NSThread* serialIOThread;
+	
+	NSMutableDictionary* keyerSettings;
 }
 
 // The serial port used to communicate to the mixer.
@@ -48,15 +51,9 @@ typedef enum {
 
 // Keying
 @property (assign) BOOL inputEnableKeyer;
-@property (assign) CGColorRef inputKeyColorMin;
-@property (assign) CGColorRef inputKeyColorMax;
-@property (assign) BOOL inputKeySwap;
-@property (assign) BOOL inputKeyInvertY;
-@property (assign) BOOL inputKeyInvertU;
-@property (assign) BOOL inputKeyInvertV;
-@property (assign) double inputKeySoftnessY;
-@property (assign) double inputKeySoftnessU;
-@property (assign) double inputKeySoftnessV;
+@property (assign) NSUInteger inputKeyerMode;
+@property (assign) NSDictionary* inputKeyerParameters;
+@property (assign) BOOL inputSwapChannels;
 
 @property (assign) CGColorRef inputBackgroundColor;
 
@@ -80,6 +77,10 @@ typedef enum {
 
 //@property (assign) NSUInteger inputMixerOutputType;	// RGBHV, 
 @property (assign) BOOL	inputReInitializeMixer;
+
+
+// QC Plugin Internal Settings
+@property (assign) NSMutableDictionary* keyerSettings;
 
 @end
 
