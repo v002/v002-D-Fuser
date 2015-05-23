@@ -1,0 +1,1 @@
+v002 D-Fuser is a Quartz Composer plugin that allows easy serial control of the TV One 1T-C2-750 Dual DVI series mixers. It also hosts "spk\_v002\_tvone.h", a shared header file started as 'spark d-fuser' arduino code, intended to facilitate development on other platforms.
